@@ -32,22 +32,19 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
+            environment {
+                SCANNER_HOME = tool('sonar-scanner')
+            }
             steps {
-                scripts {
-                    // This pulls the tool you just configured in the UI
-                    def scannerHome = tool 'sonar-scanner'
-                    
-                    withSonarQubeEnv('sonar-server') {
-                        // Notice how we use ${scannerHome}/bin/sonar-scanner to call the executable
-                        sh """
-                            ${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                            -Dsonar.sources=app \
-                            -Dsonar.tests=tests \
-                            -Dsonar.python.version=3.10
-                        """
-                    }
-
+                // Requires SonarQube Scanner configured in Jenkins
+                withSonarQubeEnv('sonar-scanner') {
+                    sh """
+                        ${SCANNER_HOME}/bin/sonar-scanner \
+                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                        -Dsonar.sources=app \
+                        -Dsonar.tests=tests \
+                        -Dsonar.python.version=3.10
+                    """
                 }
             }
         }
