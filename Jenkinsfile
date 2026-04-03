@@ -1,5 +1,7 @@
 pipeline {
-    agent any
+    tools {
+        jdk 'jdk21'
+    }
 
     environment {
         // Variables for your pipeline
