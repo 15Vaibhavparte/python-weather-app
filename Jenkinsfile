@@ -10,7 +10,7 @@ pipeline {
         NEXUS_URL = "http://52.66.155.250:8081/repository/weather-app/"
         SONAR_PROJECT_KEY = "weather-app"
         DOCKERHUB_USERNAME = 'parte15'
-        IMAGE_NAME = "weather-api"
+        IMAGE_NAME = "${DOCKERHUB_USERNAME}/weather-api"
     }
 
     stages {
