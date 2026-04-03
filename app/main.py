@@ -16,10 +16,10 @@ def get_weather(city: str):
 # A deliberate "Code Smell" and Security Vulnerability
 def insecure_function():
     # Unused variable (Code Smell)
-    unused_var = "I am not used"
+    #unused_var = "I am not used"
     
     # Hardcoded sensitive-looking string (Security Hotspot)
-    db_password = "admin_password_123"
+    db_password = os.getenv("DB_PASSWORD")
     
     # Using an insecure print in a web app
     print("This is a bad practice for logging")
