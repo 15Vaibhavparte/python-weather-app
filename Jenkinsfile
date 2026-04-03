@@ -30,7 +30,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 // Requires SonarQube Scanner configured in Jenkins
-                withSonarQubeEnv('SonarQube-Server') {
+                withSonarQubeEnv('sonar-server') {
                     sh """
                         sonar-scanner \
                         -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
@@ -74,12 +74,21 @@ pipeline {
                     def app = docker.build("${IMAGE_NAME}:${env.BUILD_ID}")
                     
                     // Push to Docker Hub (Requires Docker Hub credentials in Jenkins)
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
+                    docker.withRegistry('https://index.docker.io/v1/', 'docker-cred') {
                         app.push()
                         app.push('latest')
                     }
                 }
             }
+        }
+    }
+}
+post {
+        success {
+            echo 'Pipeline executed successfully! 🚀'
+        }
+        failure {
+            echo 'Pipeline failed. Check the logs for errors. ❌'
         }
     }
 }
