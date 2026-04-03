@@ -37,7 +37,7 @@ pipeline {
             }
             steps {
                 // Requires SonarQube Scanner configured in Jenkins
-                withSonarQubeEnv('sonar-scanner') {
+                withSonarQubeEnv('sonar-server') {
                     sh """
                         ${SCANNER_HOME}/bin/sonar-scanner \
                         -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
