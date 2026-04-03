@@ -1,4 +1,6 @@
 pipeline {
+    agent any
+    
     tools {
         jdk 'jdk21'
     }
@@ -64,7 +66,7 @@ pipeline {
                     
                     # Upload to Nexus (Using credentials stored in Jenkins)
                     # Note: In a real environment, use Jenkins credentials binding
-                    twine upload --repository-url ${NEXUS_URL} -u admin -p your_nexus_password dist/*
+                    twine upload --repository-url ${NEXUS_URL} -u admin -p admin@123 dist/*
                 '''
             }
         }
@@ -85,11 +87,3 @@ pipeline {
         }
     }
 }
-post {
-        success {
-            echo 'Pipeline executed successfully! 🚀'
-        }
-        failure {
-            echo 'Pipeline failed. Check the logs for errors. ❌'
-        }
-    }
