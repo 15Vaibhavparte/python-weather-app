@@ -6,7 +6,6 @@ pipeline {
     }
 
     environment {
-        // Variables for your pipeline
         NEXUS_URL = "http://52.66.155.250:8081/repository/weather-app/"
         SONAR_PROJECT_KEY = "weather-app"
         DOCKERHUB_USERNAME = 'parte15'
@@ -14,76 +13,63 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Initial Setup') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Install & Test') {
-            steps {
-                sh '''
-                    python3 -m venv venv
-                    . venv/bin/activate
-                    pip install -e .[test]
-                    pytest tests/ --junitxml=test-results.xml
-                '''
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            environment {
-                SCANNER_HOME = tool('sonar-scanner')
-            }
-            steps {
-                // Requires SonarQube Scanner configured in Jenkins
-                withSonarQubeEnv('sonar-server') {
-                    sh """
-                        ${SCANNER_HOME}/bin/sonar-scanner \
-                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                        -Dsonar.sources=app \
-                        -Dsonar.tests=tests \
-                        -Dsonar.python.version=3.10
-                    """
+        stage('Parallel Operations') {
+            parallel {
+                // Branch 1: Quality & Security Analysis
+                stage('Static Analysis') {
+                    environment {
+                        SCANNER_HOME = tool('sonar-scanner')
+                    }
+                    steps {
+                        withSonarQubeEnv('sonar-server') {
+                            sh """
+                                ${SCANNER_HOME}/bin/sonar-scanner \
+                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                -Dsonar.sources=app \
+                                -Dsonar.tests=tests \
+                                -Dsonar.python.version=3.10
+                            """
+                        }
+                        // Wait for Quality Gate inside this branch
+                        timeout(time: 1, unit: 'HOURS') {
+                            waitForQualityGate abortPipeline: true
+                        }
+                    }
                 }
-            }
-        }
 
-        stage('Quality Gate') {
-            steps {
-                // Pauses pipeline until SonarQube confirms code meets standards
-                timeout(time: 1, unit: 'HOURS') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
+                // Branch 2: Testing, Artifact Management, and Dockerization
+                stage('Build and Release') {
+                    steps {
+                        // 1. Install & Test
+                        sh '''
+                            python3 -m venv venv
+                            . venv/bin/activate
+                            pip install -e .[test]
+                            pytest tests/ --junitxml=test-results.xml
+                        '''
+                        
+                        // 2. Package & Push to Nexus
+                        sh '''
+                            . venv/bin/activate
+                            pip install build twine
+                            python -m build
+                            twine upload --repository-url ${NEXUS_URL} -u admin -p admin@123 dist/*
+                        '''
 
-        stage('Package & Push to Nexus') {
-            steps {
-                sh '''
-                    . venv/bin/activate
-                    pip install build twine
-                    
-                    # Build Wheel and Source dist
-                    python -m build
-                    
-                    # Upload to Nexus (Using credentials stored in Jenkins)
-                    # Note: In a real environment, use Jenkins credentials binding
-                    twine upload --repository-url ${NEXUS_URL} -u admin -p admin@123 dist/*
-                '''
-            }
-        }
-
-        stage('Build & Push Docker Image') {
-            steps {
-                script {
-                    // Build the multi-stage image
-                    def app = docker.build("${IMAGE_NAME}:${env.BUILD_ID}")
-                    
-                    // Push to Docker Hub (Requires Docker Hub credentials in Jenkins)
-                    docker.withRegistry('https://index.docker.io/v1/', 'docker-cred') {
-                        app.push()
-                        app.push('latest')
+                        // 3. Build & Push Docker Image
+                        script {
+                            def app = docker.build("${IMAGE_NAME}:${env.BUILD_ID}")
+                            docker.withRegistry('https://index.docker.io/v1/', 'docker-cred') {
+                                app.push()
+                                app.push('latest')
+                            }
+                        }
                     }
                 }
             }
